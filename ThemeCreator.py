@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-# example helloworld.py
+import os
+from xml.etree.ElementTree import ElementTree
 
 import pygtk
 pygtk.require('2.0')
@@ -16,6 +17,25 @@ class ThemeCreator:
         
     def on_newtheme_activate(self, widget, data=None):
         print "clicked new"
+        
+    def on_opentheme_activate(self, widget, data=None):
+        schemify = lambda x: ''.join(['{http://schemas.android.com/apk/res/android}', x])
+        manifest_file = 'themes/Cyanbread/AndroidManifest.xml'
+        manifest = ElementTree()
+        manifest.parse(manifest_file)
+        for prospect in manifest.iterfind('theme/meta-data'):
+            if prospect.attrib[schemify('name')] == 'com.tmobile.theme.redirections':
+                redirections_id = prospect.attrib[schemify('resource')]
+                break
+        
+        redirections_file = os.path.join('themes/Cyanbread/res', ''.join([redirections_id[1:], '.xml']))
+        redirections = ElementTree()
+        redirections.parse(redirections_file)
+        for redir in redirections.iterfind('package-redirections'):
+            self.pkgs.append([redir.attrib[schemify('name')]])
+
+    def on_savetheme_activate(self, widget, data=None):
+        print "clicked save"
 
     def __init__(self):
         uifile = "ThemeCreator.glade"
@@ -24,12 +44,8 @@ class ThemeCreator:
     
         self.wTree.connect_signals(self)
 
-        pkgs = self.wTree.get_object("packages")
-        for x in ['One', 'Two']:
-            pkgs.append([x])
-        res = self.wTree.get_object("resources")
-        for x in ['One', 'Two']:
-            res.append([x])
+        self.pkgs = self.wTree.get_object("packages")
+        self.res = self.wTree.get_object("resources")
 
         pkglist = self.wTree.get_object("packagelist")
         column = gtk.TreeViewColumn("Package", gtk.CellRendererText(), text=0)
