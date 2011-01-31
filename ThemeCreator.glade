@@ -6,15 +6,12 @@
     <columns>
       <!-- column-name pkgname -->
       <column type="gchararray"/>
-    </columns>
-  </object>
-  <object class="GtkListStore" id="resources">
-    <columns>
-      <!-- column-name resname -->
+      <!-- column-name res_id -->
       <column type="gchararray"/>
     </columns>
   </object>
   <object class="GtkWindow" id="window">
+    <property name="title">Theme Creator</property>
     <property name="default_width">400</property>
     <property name="default_height">300</property>
     <signal name="destroy" handler="on_window_destroy"/>
@@ -75,11 +72,12 @@
                       </object>
                     </child>
                     <child>
-                      <object class="GtkImageMenuItem" id="imagemenuitem5">
+                      <object class="GtkImageMenuItem" id="quit">
                         <property name="label">gtk-quit</property>
                         <property name="visible">True</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
+                        <signal name="activate" handler="on_quit_activate"/>
                       </object>
                     </child>
                   </object>
@@ -169,10 +167,20 @@
             <property name="can_focus">True</property>
             <property name="position">100</property>
             <child>
-              <object class="GtkTreeView" id="packagelist">
+              <object class="GtkScrolledWindow" id="scrolledwindow1">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="model">packages</property>
+                <property name="hscrollbar_policy">never</property>
+                <property name="vscrollbar_policy">automatic</property>
+                <child>
+                  <object class="GtkTreeView" id="packagelist">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="model">packages</property>
+                    <property name="search_column">0</property>
+                    <signal name="cursor_changed" handler="on_packagelist_cursor_changed"/>
+                  </object>
+                </child>
               </object>
               <packing>
                 <property name="resize">False</property>
@@ -180,10 +188,18 @@
               </packing>
             </child>
             <child>
-              <object class="GtkIconView" id="resourcelist">
+              <object class="GtkScrolledWindow" id="scrolledwindow2">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="model">resources</property>
+                <property name="hscrollbar_policy">automatic</property>
+                <property name="vscrollbar_policy">automatic</property>
+                <child>
+                  <object class="GtkIconView" id="resourcelist">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="model">resources</property>
+                  </object>
+                </child>
               </object>
               <packing>
                 <property name="resize">True</property>
@@ -197,5 +213,15 @@
         </child>
       </object>
     </child>
+  </object>
+  <object class="GtkListStore" id="resources">
+    <columns>
+      <!-- column-name resname -->
+      <column type="gchararray"/>
+      <!-- column-name local_res_id -->
+      <column type="gchararray"/>
+      <!-- column-name img -->
+      <column type="GdkPixbuf"/>
+    </columns>
   </object>
 </interface>
