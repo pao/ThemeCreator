@@ -12,40 +12,47 @@ theme_path = 'themes/Cyanbread'
 
 nsify = lambda x: ''.join(['{http://schemas.android.com/apk/res/android}', x])
 
-def res_to_file(res):
+drawable_specifiers = [
+            '-hdpi', '-land-hdpi', '-hdpi-finger',
+            '-mdpi', '-land-mdpi', '-mdpi-finger',
+            '-ldpi', '-land-ldpi', '-ldpi-finger',
+            ]
+
+def resolve_res(res):
     # We're ignoring the potential security vulerability with os.path.exists();
     # just find the valid path(s)
+    
+    res_files = {}
     
     # Could just be xml
     maybe_file = os.path.join(theme_path, 'res', ''.join([res[1:], '.xml']))
     if os.path.exists(maybe_file):
-        return maybe_file
+        res_files['xml'] = maybe_file
         
     # Could also be a .png
     maybe_file = os.path.join(theme_path, 'res', ''.join([res[1:], '.png']))
     if os.path.exists(maybe_file):
-        return maybe_file
+        res_files['png'] = maybe_file
 
-    # Or a  .9.png
+    # Or a .9.png
     maybe_file = os.path.join(theme_path, 'res', ''.join([res[1:], '.9.png']))
     if os.path.exists(maybe_file):
-        return maybe_file
+        res_files['png'] = maybe_file
         
     # If it's a drawable, go hunting
     if res[1:10] == 'drawable/':
-        for extra_path in ['-hdpi', '-mdpi', '-ldpi']:
+        for extra_path in drawable_specifiers:
             # Could also be a .png
             maybe_file = os.path.join(theme_path, 'res', ''.join([res[1:9], extra_path, res[9:], '.png']))
             if os.path.exists(maybe_file):
-                return maybe_file
+                res_files[extra_path] = maybe_file
 
             # Or a  .9.png
             maybe_file = os.path.join(theme_path, 'res', ''.join([res[1:9], extra_path, res[9:], '.9.png']))
             if os.path.exists(maybe_file):
-                return maybe_file
+                res_files[extra_path] = maybe_file
     
-    # If not, this is probably not a file
-    return None
+    return res_files
 
 class ThemeCreator:
     
@@ -67,7 +74,7 @@ class ThemeCreator:
                 redirections_id = prospect.attrib[nsify('resource')]
                 break
         
-        redirections_file = res_to_file(redirections_id)
+        redirections_file = resolve_res(redirections_id)['xml']
         redirections = ElementTree()
         redirections.parse(redirections_file)
         for redir in redirections.iterfind('package-redirections'):
@@ -75,15 +82,26 @@ class ThemeCreator:
     
     def on_packagelist_cursor_changed(self, widget, data=None):
         (tree, cursor) = self.pkgview.get_selection().get_selected()
-        resources_file = res_to_file(tree.get_value(cursor, 1))
+        resources_file = resolve_res(tree.get_value(cursor, 1))
         resources = ElementTree()
-        resources.parse(resources_file)
+        resources.parse(resources_file['xml'])
         
         self.res.clear()
         for resource in resources.iterfind('item'):
-            res_file = res_to_file(resource.text)
-            if res_file is not None and res_file[-4:] == '.png':
-                res_img = gtk.gdk.pixbuf_new_from_file(res_file)
+            res_file = resolve_res(resource.text)
+            res_in = [s for s in drawable_specifiers if s in res_file]
+            if 'png' in res_file:
+                res_img = gtk.gdk.pixbuf_new_from_file(res_file['png'])
+            elif res_in:
+                res_img = gtk.gdk.pixbuf_new_from_file(res_file[res_in[0]])
+            elif 'xml' in res_file:
+                # trace into this file
+                deep_res = ElementTree()
+                deep_res.parse(res_file['xml'])
+                res_img = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, True, 8, 1, 1)
+                for item in deep_res.iterfind('item'):
+                    if nsify('drawable') in item.attrib:
+                        res_img = gtk.gdk.pixbuf_new_from_file(resolve_res(item.attrib[nsify('drawable')])['png'])
             else:
                 res_img = gtk.gdk.Pixbuf(gtk.gdk.COLORSPACE_RGB, True, 8, 1, 1)
             self.res.append([
